@@ -8,7 +8,8 @@ Phase 1 — Platform Foundations
 - [x] Repo public and clean
 
 ## In Progress
-- [ ] Canonical docs
+- [x] Repo public and clean
+- [x] Canonical docs
 - [ ] Drizzle setup
 - [ ] Neon connection
 - [ ] Core schema
