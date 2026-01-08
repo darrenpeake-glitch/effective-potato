@@ -6,27 +6,49 @@ function mustEnv(name: string): string {
   return v;
 }
 
+function makeSql(url: string, max: number) {
+  return postgres(url, {
+    max,
+    prepare: false, // reduce test flakiness; no server-prepared statements
+    onnotice: () => {}, // keep CI output clean
+  });
+}
+
 export function adminDb() {
-  return postgres(mustEnv("DATABASE_URL_ADMIN"), { max: 1 });
+  return makeSql(mustEnv("DATABASE_URL_ADMIN"), 1);
 }
 
 export function appDb() {
-  return postgres(mustEnv("DATABASE_URL_APP"), { max: 1 });
+  // begin() pins a single connection; pool max>1 is fine
+  return makeSql(mustEnv("DATABASE_URL_APP"), 5);
 }
 
 export async function closeDb(sql: ReturnType<typeof postgres>) {
   await sql.end({ timeout: 5 });
 }
 
-/**
- * Sets request-scoped context vars for RLS in the *current* transaction/connection.
- * We keep it explicit and "LOCAL" (true) so it is scoped to transaction/session.
- */
-export async function setAppContext(
+async function setLocalAppContext(
   sql: ReturnType<typeof postgres>,
   userId: string,
   orgId: string,
 ) {
+  // LOCAL (true) is correct *inside an explicit transaction*
   await sql`select set_config('app.user_id', ${userId}, true)`;
-  await sql`select set_config('app.org_id', ${orgId}, true)`;
+  await sql`select set_config('app.org_id',  ${orgId},  true)`;
+}
+
+/**
+ * Run a block inside a single transaction+connection with LOCAL session vars set.
+ * This matches how you'd implement per-request context in the app layer.
+ */
+export async function withAppContext<T>(
+  app: ReturnType<typeof postgres>,
+  userId: string,
+  orgId: string,
+  fn: (tx: ReturnType<typeof postgres>) => Promise<T>,
+): Promise<T> {
+  return app.begin(async (tx) => {
+    await setLocalAppContext(tx, userId, orgId);
+    return fn(tx);
+  });
 }
