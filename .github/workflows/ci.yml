@@ -10,6 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d testdb"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      # drizzle-kit migrate reads this (drizzle.config.ts uses DATABASE_URL_MIGRATE)
+      DATABASE_URL_MIGRATE: postgresql://postgres:postgres@localhost:5432/testdb?sslmode=disable
+      # your app/tests likely also rely on these existing vars
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@localhost:5432/testdb?sslmode=disable
+      DATABASE_URL_APP: postgresql://postgres:postgres@localhost:5432/testdb?sslmode=disable
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +50,11 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      # Tests require DB env vars. In CI we do NOT hit Neon.
-      # We'll add a local ephemeral Postgres in the next step (job service) in the next commit.
-      - name: Unit tests (no DB)
-        run: pnpm -s vitest run --version
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Apply DB migrations
+        run: pnpm db:migrate
+
+      - name: Run tests
+        run: pnpm vitest run
