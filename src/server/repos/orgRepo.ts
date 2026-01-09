@@ -1,10 +1,10 @@
-import type { SqlClient } from "../../test/db";
+import type { Db } from "../db";
 import crypto from "node:crypto";
 
 export type OrgRow = {
   id: string;
   name: string;
-  created_at: string;
+  created_at: Date;
 };
 
 type CreateOrgParams = {
@@ -13,7 +13,7 @@ type CreateOrgParams = {
   orgId?: string; // optional for tests / deterministic fixtures
 };
 
-export async function createOrgWithOwner(admin: SqlClient, params: CreateOrgParams) {
+export async function createOrgWithOwner(admin: Db, params: CreateOrgParams) {
   const orgId = params.orgId ?? crypto.randomUUID();
 
   await admin`
@@ -35,7 +35,7 @@ export async function createOrgWithOwner(admin: SqlClient, params: CreateOrgPara
   return rows[0]!;
 }
 
-export async function getCurrentOrg(tx: SqlClient) {
+export async function getCurrentOrg(tx: Db) {
   const rows = await tx<OrgRow[]>`
     select id, name, created_at
     from public.orgs

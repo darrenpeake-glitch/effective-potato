@@ -6,12 +6,12 @@ function mustEnv(name: string): string {
   return v;
 }
 
-export type Db = Sql;
-
+// ADMIN: max:1 is fine (server ops are transactional)
 export function adminDb(): Sql {
   return postgres(mustEnv("DATABASE_URL_ADMIN"), { max: 1 });
 }
 
+// APP: request-scoped; transactions pin a connection
 export function appDb(): Sql {
   return postgres(mustEnv("DATABASE_URL_APP"), { max: 5 });
 }
