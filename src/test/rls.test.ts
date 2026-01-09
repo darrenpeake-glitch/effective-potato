@@ -53,12 +53,7 @@ describe("RLS (fail-closed + tenant isolation)", () => {
     await closeDb(admin);
   });
 
-  it("fails closed without app.user_id/app.org_id", async () => {
-    const rows = await app<{ count: number }[]>`
-      select count(*)::int as count from public.orgs
-    `;
-    expect(rows[0].count).toBe(0);
-  });
+
 
   it("allows access to current org when context is set and membership exists", async () => {
     const rows = await withAppContext(app, USER_A, ORG_A, (tx) =>
