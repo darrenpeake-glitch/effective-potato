@@ -1,27 +1,20 @@
-import type postgres from "postgres";
-
-async function setLocalAppContext(
-  sql: ReturnType<typeof postgres>,
-  userId: string,
-  orgId: string,
-) {
-  // LOCAL=true is correct inside a transaction (postgres.begin pins one connection).
-  await sql`select set_config('app.user_id', ${userId}, true)`;
-  await sql`select set_config('app.org_id',  ${orgId},  true)`;
-}
+import type { SqlClient } from "./db";
+import { setLocalAppContext } from "./db";
 
 /**
- * Run a block inside a single transaction+connection with LOCAL session vars set.
- * This matches per-request context in the app layer.
+ * Some tests use a local helper; keep it consistent with src/test/db.ts.
  */
 export async function withAppContext<T>(
-  app: ReturnType<typeof postgres>,
+  app: SqlClient,
   userId: string,
   orgId: string,
-  fn: (tx: ReturnType<typeof postgres>) => Promise<T>,
+  fn: (tx: SqlClient) => Promise<T> | T,
 ): Promise<T> {
-  return app.begin(async (tx) => {
-    await setLocalAppContext(tx, userId, orgId);
-    return fn(tx);
+  const result = await app.begin(async (tx) => {
+    const sql = tx as unknown as SqlClient;
+    await setLocalAppContext(sql, userId, orgId);
+    return await fn(sql);
   });
+
+  return result as unknown as T;
 }

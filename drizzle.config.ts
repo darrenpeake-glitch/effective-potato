@@ -7,7 +7,4 @@ export default {
   dbCredentials: {
     url: process.env.DATABASE_URL_MIGRATE!,
   },
-  // Pin provider so the tooling is aligned with Neon/Postgres usage.
-  // (This does not install or use Supabase.)
-  provider: "neon",
 } satisfies Config;

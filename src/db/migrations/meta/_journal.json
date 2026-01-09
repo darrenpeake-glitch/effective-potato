@@ -85,6 +85,13 @@
       "when": 1767947710267,
       "tag": "0011_add_audit_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1767951470666,
+      "tag": "0012_foamy_mojo",
+      "breakpoints": true
     }
   ]
 }

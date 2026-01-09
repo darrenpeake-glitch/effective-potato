@@ -6,49 +6,42 @@ function mustEnv(name: string): string {
   return v;
 }
 
-function makeSql(url: string, max: number) {
-  return postgres(url, {
-    max,
-    prepare: false, // reduce test flakiness; no server-prepared statements
-    onnotice: () => {}, // keep CI output clean
-  });
+export type SqlClient = ReturnType<typeof postgres>;
+
+export function adminDb(): SqlClient {
+  return postgres(mustEnv("DATABASE_URL_ADMIN"), { max: 1 });
 }
 
-export function adminDb() {
-  return makeSql(mustEnv("DATABASE_URL_ADMIN"), 1);
+export function appDb(): SqlClient {
+  return postgres(mustEnv("DATABASE_URL_APP"), { max: 5 }); // begin() pins a single connection
 }
 
-export function appDb() {
-  // begin() pins a single connection; pool max>1 is fine
-  return makeSql(mustEnv("DATABASE_URL_APP"), 5);
-}
-
-export async function closeDb(sql: ReturnType<typeof postgres>) {
+export async function closeDb(sql: SqlClient) {
   await sql.end({ timeout: 5 });
 }
 
-async function setLocalAppContext(
-  sql: ReturnType<typeof postgres>,
-  userId: string,
-  orgId: string,
-) {
-  // LOCAL (true) is correct *inside an explicit transaction*
+export async function setLocalAppContext(sql: SqlClient, userId: string, orgId: string) {
+  // LOCAL (true) is correct inside an explicit transaction
   await sql`select set_config('app.user_id', ${userId}, true)`;
   await sql`select set_config('app.org_id',  ${orgId},  true)`;
 }
 
 /**
  * Run a block inside a single transaction+connection with LOCAL session vars set.
- * This matches how you'd implement per-request context in the app layer.
+ * We intentionally treat the transaction object as a SqlClient (callable template tag),
+ * because postgres-js transaction typings are brittle under some TS configs.
  */
 export async function withAppContext<T>(
-  app: ReturnType<typeof postgres>,
+  app: SqlClient,
   userId: string,
   orgId: string,
-  fn: (tx: ReturnType<typeof postgres>) => Promise<T>,
+  fn: (tx: SqlClient) => Promise<T> | T,
 ): Promise<T> {
-  return app.begin(async (tx) => {
-    await setLocalAppContext(tx, userId, orgId);
-    return fn(tx);
+  const result = await app.begin(async (tx) => {
+    const sql = tx as unknown as SqlClient;
+    await setLocalAppContext(sql, userId, orgId);
+    return await fn(sql);
   });
+
+  return result as unknown as T;
 }

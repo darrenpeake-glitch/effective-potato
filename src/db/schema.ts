@@ -29,7 +29,7 @@ export const sites = pgTable("sites", {
 }));
 
 export const memberships = pgTable("memberships", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id").notNull(),
   userId: uuid("user_id").notNull(),
   role: text("role").notNull(),
