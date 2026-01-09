@@ -127,4 +127,65 @@ The system now has:
 - clear role separation,
 - and a reliable migration pipeline.
 
+## Phase 1 — Complete
+
+Status: ✅ Complete
+
+- Core schema finalised (orgs, sites, memberships, audit_log)
+- Row Level Security enabled and forced on all tenant tables
+- Fail-closed access model enforced
+- Explicit app/server role separation
+- audit_log hardened:
+  - Append-only
+  - Server-write-only
+  - Tenant-scoped reads
+- Integration tests passing against real Postgres
+- Repeatable test + migration environment established
+
+## Phase 2 — Ready
+
+Entry conditions met:
+- No schema churn expected in Phase 2
+- RLS policies stable and verified
+- Safe domain expansion possible without weakening isolation
 Development can safely proceed to Phase 2.
+
+---
+
+## Phase 2 — Audit Read Surface (In Progress)
+
+### Goal
+Deliver a **read-only Activity Feed** backed by `public.audit_log` with **no additional write power** granted to the app role.
+
+### Non-negotiable constraints
+- **No relaxation of RLS**; continue fail-closed semantics.
+- App role remains **SELECT-only** on `audit_log` (and feed views).
+- `audit_log` remains **server-only writable** (migrate/service roles only).
+- No new tenant-scoped write tables in Phase 2 unless explicitly required.
+
+### Scope (Deliverables)
+1. **DB read model**
+   - `public.v_audit_log_feed` view (projection over `public.audit_log`, RLS applies at base table)
+   - Indexes to support pagination and filtering:
+     - `(org_id, created_at desc, id desc)`
+     - `(org_id, entity, entity_id, created_at desc, id desc)`
+     - optional `(org_id, action, created_at desc)`
+
+2. **Repo layer**
+   - `listAuditFeed({ limit, cursor })`
+   - `listEntityAudit({ entity, entityId, limit, cursor })`
+   - Deterministic ordering: `ORDER BY created_at DESC, id DESC`
+
+3. **Tests**
+   - Existing Phase-1 tests continue to pass.
+   - Add coverage for:
+     - feed ordering stability
+     - cursor pagination correctness
+     - entity filtering correctness
+     - non-member sees empty (or error if invalid context guards apply)
+
+### Definition of Done
+- `pnpm test` passes
+- `pnpm typecheck` passes
+- Feed queries return correct results under RLS
+- No new privileges granted to the app role beyond read access for the feed view
