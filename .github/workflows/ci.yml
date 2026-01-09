@@ -8,53 +8,48 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+
+      # These are dummy placeholders; tests that require DB should
+      # use a local Postgres URL in CI (set below once Postgres service is up).
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
+      DATABASE_URL_MIGRATE: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
+      DATABASE_URL_APP: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
 
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d testdb"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
-
-    env:
-      # drizzle-kit migrate reads this (drizzle.config.ts uses DATABASE_URL_MIGRATE)
-      DATABASE_URL_MIGRATE: postgresql://postgres:postgres@localhost:5432/testdb?sslmode=disable
-      # your app/tests likely also rely on these existing vars
-      DATABASE_URL_ADMIN: postgresql://postgres:postgres@localhost:5432/testdb?sslmode=disable
-      DATABASE_URL_APP: postgresql://postgres:postgres@localhost:5432/testdb?sslmode=disable
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Install deps
+      - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Migrate
+        run: pnpm db:migrate
 
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Apply DB migrations
-        run: pnpm db:migrate
-
-      - name: Run tests
+      - name: Test
         run: pnpm vitest run
