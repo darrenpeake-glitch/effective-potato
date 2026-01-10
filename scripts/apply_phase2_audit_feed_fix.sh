@@ -1,3 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Must run from repo root
+if [[ ! -f "./package.json" ]]; then
+  echo "ERROR: run this from the repo root (package.json not found)" >&2
+  exit 1
+fi
+
+REPO_FILE="src/server/repos/auditFeedRepo.ts"
+BUILD_STATE="docs/BUILD_STATE.md"
+
+echo "→ Writing $REPO_FILE"
+
+cat > "$REPO_FILE" <<'TS'
 import type { Db } from "../db";
 
 export type AuditFeedRow = {
@@ -91,3 +106,18 @@ export async function listEntityAudit(tx: Db, params: ListEntityAuditParams) {
     limit ${limit}
   `;
 }
+TS
+
+echo "→ Updating $BUILD_STATE"
+
+TODAY="$(date +%Y-%m-%d)"
+TMP="$(mktemp)"
+
+awk -v today="$TODAY" '
+/^Last updated:/ { print "Last updated: " today; next }
+{ print }
+' "$BUILD_STATE" > "$TMP"
+
+mv "$TMP" "$BUILD_STATE"
+
+echo "✓ Phase 2.3 applied"
