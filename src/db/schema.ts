@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, boolean, uniqueIndex, index, json } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -50,7 +50,7 @@ export const auditLog = pgTable("audit_log", {
   entity: text("entity").notNull(),
   entityId: uuid("entity_id"),
   // NOTE: migrations create `meta jsonb`; keep name aligned with migrations and DB usage.
-  meta: text("meta"),
+  meta: json("meta"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   orgIdx: index("audit_log_org_idx").on(t.orgId),
