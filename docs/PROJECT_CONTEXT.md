@@ -1,7 +1,7 @@
 # Occono Auto Rebuild — Project Context (Canonical)
 
 ## Purpose
-Engineering-first rebuild of Occono Auto with a focus on correctness, security, and long-term maintainability. Feature velocity is explicitly deprioritised until platform foundations are proven.
+Engineering-first rebuild of Occono Auto to provide a **workshop management system** for small independent automotive businesses. The emphasis is on correctness, security, and maintainability rather than rapid feature velocity; platform foundations must be proven before broad feature expansion.
 
 ## Stack (Authoritative)
 - App: Next.js (App Router) + TypeScript
@@ -28,4 +28,6 @@ Engineering-first rebuild of Occono Auto with a focus on correctness, security, 
 - Public marketing pages
 - Billing / Stripe
 - Messaging / integrations
-- Workshop domain features (jobs, vehicles, invoicing)
+
+## Planned for later phases
+- Workshop domain features: jobs, vehicles, invoicing (to be implemented after platform foundations are validated)

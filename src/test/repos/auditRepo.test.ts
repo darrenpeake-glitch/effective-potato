@@ -52,6 +52,50 @@ describe("repos: audit log (append-only, server write)", () => {
     expect(rows[0].org_id).toBe(org.id);
   });
 
+  it("snapshots actor identity at write time", async () => {
+    const org2 = await createOrgWithOwner(admin, { name: "Org Snapshot", ownerUserId: USER_A });
+    // Ensure the actor has a name+email at write-time
+    await admin`update public.users set name = 'Alice', email = 'alice@example.com' where id = ${USER_A}`;
+
+    await appendAudit(admin, {
+      orgId: org2.id,
+      action: "site.updated",
+      actorUserId: USER_A,
+      meta: { note: "snapshot" },
+    });
+
+    // mutate the user afterwards
+    await admin`update public.users set name = 'Eve', email = 'eve@example.com' where id = ${USER_A}`;
+
+    const row = await admin<{ actor_name: string | null; actor_email: string | null }[]>`
+      select actor_name, actor_email
+      from public.audit_log
+      where org_id = ${org2.id}
+      order by created_at desc
+      limit 1
+    `;
+
+    expect(row[0].actor_name).toBe('Alice');
+    expect(row[0].actor_email).toBe('alice@example.com');
+  });
+
+  it("handles missing actor gracefully", async () => {
+    const org3 = await createOrgWithOwner(admin, { name: "Org Missing Actor", ownerUserId: USER_A });
+    await appendAudit(admin, {
+      orgId: org3.id,
+      action: "org.updated",
+      actorUserId: "99999999-9999-9999-9999-999999999999",
+    });
+    const row = await admin<{ actor_name: string | null }[]>`
+      select actor_name
+      from public.audit_log
+      where org_id = ${org3.id}
+      order by created_at desc
+      limit 1
+    `;
+    expect(row[0].actor_name).toBeNull();
+  });
+
   it("non-member cannot read audit rows (RLS filters to empty)", async () => {
     const org = await createOrgWithOwner(admin, { name: "Org Audit 2", ownerUserId: USER_A });
 
