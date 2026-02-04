@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { adminDb, appDb, closeDb, withAppContext } from "./db";
+import type { SqlClient } from "./db";
 
 const USER_A = "20000000-0000-0000-0000-000000000001";
 
@@ -42,7 +43,7 @@ describe("Auth context guards", () => {
     // If you chose the 'silent empty' model instead, then update expectation accordingly.
     await expect(
       app.begin(async (tx) => {
-        const sql = tx as any;
+        const sql = tx as unknown as SqlClient;
         await sql`select set_config('app.user_id', ${USER_A}::text, false)`;
         await sql`select set_config('app.org_id',  '10000000-0000-0000-0000-000000000099', false)`;
         return sql`select name from public.orgs`;

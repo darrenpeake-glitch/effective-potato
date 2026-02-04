@@ -1,5 +1,6 @@
 {
   "name": "effective-potato",
+  "description": "Workshop management system for small independent automotive businesses",
   "version": "0.1.0",
   "private": true,
   "scripts": {

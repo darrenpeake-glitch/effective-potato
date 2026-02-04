@@ -184,4 +184,28 @@ describe("repos: audit feed (Phase 2.2)", () => {
     for (const r of page2) expect(p1Ids.has(r.id)).toBe(false);
     for (const r of page2) expect(r.org_id).toBe(org.id);
   });
+
+  it("meta JSON roundtrips (insert -> feed)", async () => {
+    const org = await createOrgWithOwner(admin, { name: "Org Meta", ownerUserId: USER_A });
+
+    const meta = { nested: { a: 1, b: ["x", "y"] }, flag: true };
+
+    await insertAudit(admin, {
+      id: "77777777-7777-7777-7777-777777777777",
+      orgId: org.id,
+      actorUserId: USER_A,
+      action: "meta.test",
+      entity: "org",
+      meta,
+    });
+
+    const rows = await withAppContext(app, USER_A, org.id, async (tx) => {
+      return listAuditFeed(tx, { limit: 50 });
+    });
+
+    const found = rows.find((r) => r.id === "77777777-7777-7777-7777-777777777777");
+    expect(found).toBeDefined();
+    // Postgres jsonb -> postgres-js should parse JSONB into JS objects
+    expect(found!.meta).toEqual(meta);
+  });
 });

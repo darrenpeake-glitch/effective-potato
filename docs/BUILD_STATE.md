@@ -1,6 +1,6 @@
 # Build State
 
-Last updated: 2026-01-09
+Last updated: 2026-01-10
 
 This document reflects the current, verified build status of the system.
 All statements below are backed by migrations, tests, and repeatable scripts.

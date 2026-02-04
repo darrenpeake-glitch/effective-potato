@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+**Occono Auto** is a workshop management system for small independent automotive businesses.
 
 ## Getting Started
 
